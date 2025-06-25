@@ -1,39 +1,39 @@
 from flask import Flask, request, jsonify
-import urllib.parse
 import requests
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-@app.route("/")
-def index():
-    return "API LinkedIn fonctionne sur Render !"
-
-@app.route("/get-linkedin-url", methods=["GET"])
+@app.route('/get-linkedin-url')
 def get_linkedin_url():
-    first = request.args.get("first", "")
-    last = request.args.get("last", "")
-    company = request.args.get("company", "")
+    first = request.args.get('first', '')
+    last = request.args.get('last', '')
+    company = request.args.get('company', '')
 
-    if not first or not last or not company:
-        return jsonify({"url": ""})
-
+    # Construction de la requête Google avec nom + prénom + entreprise
     query = f'site:linkedin.com/in "{first} {last}" "{company}"'
-    search_url = "https://www.google.com/search?q=" + urllib.parse.quote_plus(query)
-    headers = {"User-Agent": "Mozilla/5.0"}
+    google_url = f'https://www.google.com/search?q={requests.utils.quote(query)}'
+
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
 
     try:
-        response = requests.get(search_url, headers=headers, timeout=10)
-        soup = BeautifulSoup(response.text, "html.parser")
-        for link in soup.find_all('a'):
-            href = link.get('href')
-            if href and "linkedin.com/in" in href:
-                linkedin_url = href.split("&")[0].replace("/url?q=", "")
-                return jsonify({"url": linkedin_url})
+        res = requests.get(google_url, headers=headers)
+        soup = BeautifulSoup(res.text, 'html.parser')
+
+        link = None
+        for a in soup.find_all('a'):
+            href = a.get('href')
+            if href and 'linkedin.com/in/' in href:
+                link = href
+                break
+
+        if link:
+            # Nettoyage du lien (format Google)
+            link = link.split("/url?q=")[-1].split("&")[0]
+            return jsonify({'url': link})
+        else:
+            return jsonify({'url': None})
     except Exception as e:
-        return jsonify({"error": str(e)})
-
-    return jsonify({"url": ""})
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+        return jsonify({'error': str(e)})
