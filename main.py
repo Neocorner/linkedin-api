@@ -1,26 +1,36 @@
 from flask import Flask, request, jsonify
-import urllib.parse
-import os
+import requests
+from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "API LinkedIn Search est en ligne 🚀"
-
-@app.route('/get-linkedin-url')
+@app.route('/get-linkedin-url', methods=['GET'])
 def get_linkedin_url():
     first = request.args.get('first')
     last = request.args.get('last')
     company = request.args.get('company')
 
-    # Construit la requête Google avec nom + prénom + entreprise
+    if not first or not last or not company:
+        return jsonify({'error': 'Missing parameters'}), 400
+
+    # Construire la requête Google
     query = f'site:linkedin.com/in "{first} {last}" "{company}"'
-    google_search_url = "/search?q=" + urllib.parse.quote(query)
+    search_url = f"https://www.google.com/search?q={requests.utils.quote(query)}"
 
-    return jsonify({"url": google_search_url})
+    # Faire la requête à Google
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+    response = requests.get(search_url, headers=headers)
 
-if __name__ == '__main__':
-    # 🔧 Corrigé pour Render : écoute sur le bon port
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Chercher le premier lien LinkedIn dans les résultats
+    for link in soup.find_all('a'):
+        href = link.get('href')
+        if href and "linkedin.com/in/" in href:
+            # Nettoyer l'URL
+            clean_url = href.split('&')[0].replace('/url?q=', '')
+            return jsonify({"url": clean_url})
+
+    return jsonify({"url": None})  # Aucun résultat trouvé
