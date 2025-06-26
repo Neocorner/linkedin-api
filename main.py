@@ -30,3 +30,6 @@ def get_linkedin_url():
             return jsonify({'url': real_url})
 
     return jsonify({'error': 'No LinkedIn profile found'})
+    
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
