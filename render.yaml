@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: linkedin-api
-    env: python
-    buildCommand: ""
-    startCommand: "gunicorn main:app"
-    plan: free
-    envVars: []
